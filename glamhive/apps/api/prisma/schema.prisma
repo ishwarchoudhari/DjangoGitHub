@@ -1,0 +1,171 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String    @id @default(cuid())
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  email           String?   @unique
+  phone           String?   @unique
+  googleId        String?   @unique
+  passwordHash    String?
+  fullName        String
+  dateOfBirth     DateTime?
+  location        String?
+  instagramLink   String?
+  avatarUrl       String?
+  role            UserRole  @default(CUSTOMER)
+  isVerified      Boolean   @default(false)
+  reviews         Review[]
+  bookings        Booking[] @relation("UserBookings")
+  messages        Message[] @relation("UserMessages")
+  savedArtists    SavedArtist[]
+  artistProfile   ArtistProfile?
+}
+
+enum UserRole {
+  CUSTOMER
+  ARTIST
+  ADMIN
+}
+
+model ArtistProfile {
+  id            String     @id @default(cuid())
+  userId        String     @unique
+  user          User       @relation(fields: [userId], references: [id])
+  displayName   String
+  bio           String?
+  verificationTick Boolean @default(false)
+  status        ArtistStatus @default(OFFLINE)
+  services      Service[]
+  products      Product[]
+  media         Media[]
+  reviews       Review[]
+  availability  Availability[]
+  messages      Message[]   @relation("ArtistMessages")
+  bookings      Booking[]
+  savedBy       SavedArtist[]
+}
+
+enum ArtistStatus {
+  ONLINE
+  AVAILABLE
+  OFFLINE
+  UNAVAILABLE
+}
+
+model Service {
+  id          String        @id @default(cuid())
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  artistId    String
+  artist      ArtistProfile @relation(fields: [artistId], references: [id])
+  name        String
+  description String?
+  priceInINR  Int
+  durationMin Int
+  active      Boolean       @default(true)
+  bookings    Booking[]
+}
+
+model Product {
+  id          String        @id @default(cuid())
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  artistId    String?
+  artist      ArtistProfile? @relation(fields: [artistId], references: [id])
+  title       String
+  description String?
+  priceInINR  Int
+  stockQty    Int           @default(0)
+  imageUrl    String?
+  active      Boolean       @default(true)
+}
+
+model Booking {
+  id            String    @id @default(cuid())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  userId        String
+  user          User      @relation("UserBookings", fields: [userId], references: [id])
+  artistId      String
+  artist        ArtistProfile @relation(fields: [artistId], references: [id])
+  serviceId     String
+  service       Service   @relation(fields: [serviceId], references: [id])
+  startTime     DateTime
+  endTime       DateTime
+  status        BookingStatus @default(PENDING)
+  notes         String?
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+model Review {
+  id          String    @id @default(cuid())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  rating      Int
+  comment     String?
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  artistId    String
+  artist      ArtistProfile @relation(fields: [artistId], references: [id])
+}
+
+model Media {
+  id          String        @id @default(cuid())
+  createdAt   DateTime      @default(now())
+  artistId    String
+  artist      ArtistProfile @relation(fields: [artistId], references: [id])
+  url         String
+  type        MediaType
+  caption     String?
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+}
+
+model Message {
+  id          String    @id @default(cuid())
+  createdAt   DateTime  @default(now())
+  content     String
+  fromUserId  String?
+  fromUser    User?     @relation("UserMessages", fields: [fromUserId], references: [id])
+  toArtistId  String
+  toArtist    ArtistProfile @relation("ArtistMessages", fields: [toArtistId], references: [id])
+}
+
+model Availability {
+  id          String        @id @default(cuid())
+  artistId    String
+  artist      ArtistProfile @relation(fields: [artistId], references: [id])
+  startTime   DateTime
+  endTime     DateTime
+  isAvailable Boolean      @default(true)
+}
+
+model SavedArtist {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  artistId  String
+  artist    ArtistProfile @relation(fields: [artistId], references: [id])
+  createdAt DateTime @default(now())
+  @@unique([userId, artistId])
+}
